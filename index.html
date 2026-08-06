@@ -297,21 +297,21 @@
     <div id="nav-resizer" class="bg-transparent border-r border-gray-200 dark:border-gray-800 flex-shrink-0"></div>
 
     <!-- Pane 2+3 · ToC + Content -->
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex flex-1 overflow-hidden min-h-0">
 
         <!-- Pane 2 · Table of Contents -->
-        <aside id="toc-pane" class="w-64 flex-shrink-0 bg-blue-50/20 dark:bg-blue-950/10 border-r border-gray-100 dark:border-gray-800/50 flex flex-col">
+        <aside id="toc-pane" class="w-64 flex-shrink-0 bg-blue-50/20 dark:bg-blue-950/10 border-r border-gray-100 dark:border-gray-800/50 flex flex-col min-h-0">
             <div class="px-5 pt-5 pb-2 flex-shrink-0">
                 <p class="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">On this page</p>
             </div>
-            <nav id="tocSidebar" class="flex-1 overflow-y-auto pb-8 pr-1"></nav>
+            <nav id="tocSidebar" class="flex-1 overflow-y-auto pb-8 pr-1 min-h-0"></nav>
         </aside>
 
         <!-- Resizer · toc -->
         <div id="toc-resizer" class="bg-transparent border-r border-gray-100 dark:border-gray-800/50 flex-shrink-0"></div>
 
         <!-- Pane 3 · Markdown content -->
-        <main id="mainScroll" class="flex-1 overflow-y-auto overflow-x-hidden">
+        <main id="mainScroll" class="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
             <div id="content-wrapper" class="max-w-4xl mx-auto px-10 py-12">
                 <div id="content">
                     <div class="flex flex-col items-center justify-center py-32 text-center">
@@ -465,13 +465,16 @@ function runScrollSpy() {
     const headings = Array.from(contentEl.querySelectorAll('h1, h2, h3, h4'));
     if (!headings.length) return;
 
+    const scroller = document.getElementById('mainScroll');
+    const scrollerTop = scroller.getBoundingClientRect().top;
+
     let current = '';
     for (const h of headings) {
-        // getBoundingClientRect gives position relative to viewport — same approach as mor-ucp-internal
-        if (h.getBoundingClientRect().top <= HEADER_OFFSET) {
+        // Offset relative to the scroll container's top edge
+        if (h.getBoundingClientRect().top - scrollerTop <= HEADER_OFFSET) {
             current = h.id;
         } else {
-            break; // headings are in document order; once we pass the threshold, stop
+            break;
         }
     }
 
@@ -488,11 +491,10 @@ window.scrollToHeader = function(e, id) {
     const el = document.getElementById(id);
     if (!el) return;
     isClickScrolling = true;
-    const top = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET;
-    // Use mainScroll (the scrolling container), not window
-    document.getElementById('mainScroll').scrollTo({ top, behavior: 'auto' });
+    const scroller = document.getElementById('mainScroll');
+    const top = el.getBoundingClientRect().top + scroller.scrollTop - scroller.getBoundingClientRect().top - HEADER_OFFSET;
+    scroller.scrollTo({ top, behavior: 'instant' });
     updateTocHighlight(id);
-    // Release click-scroll lock on next frame
     requestAnimationFrame(() => { isClickScrolling = false; });
 };
 
@@ -657,7 +659,7 @@ async function loadDocument(docPath) {
                 `<div class="markdown-alert markdown-alert-${alertType}"><div class="markdown-alert-title">${title}</div>${body}</div>`
         );
 
-        contentEl.innerHTML = `<div class="markdown-content" style="--content-font-size: ${getCurFS()}px">${renderedHtml}</div>`;
+        contentEl.innerHTML = `<div class="markdown-content">${renderedHtml}</div>`;
 
         // ── Fix relative image paths ───────────────────────────────────────
         contentEl.querySelectorAll('img').forEach(img => {

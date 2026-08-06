@@ -21,7 +21,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/thomasreinecke/markdown-viewer.git"
+    "url": "git+https://github.com/thomasreinecke/markdown-viewer.git"
   },
   "homepage": "https://github.com/thomasreinecke/markdown-viewer#readme",
   "bugs": {
