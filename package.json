@@ -1,6 +1,6 @@
 {
   "name": "@thomasreinecke/markdown-viewer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A zero-dependency local markdown viewer with a three-pane layout, sticky ToC scrollspy, dark mode, Mermaid support, and syntax highlighting.",
   "main": "bin/server.js",
   "bin": {
