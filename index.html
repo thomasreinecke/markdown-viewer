@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default' });
+        window.mermaid = mermaid;
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-dark">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-light">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { 'ibm-blue': '#0f62fe' } } }
+        }
+    </script>
+    <style>
+        /* ── Scrollbars ─────────────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* ── Markdown content ───────────────────────────────────────────── */
+        .markdown-content {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            font-size: var(--content-font-size, 16px);
+            line-height: 1.625;
+            color: #334155;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .dark .markdown-content { color: #cbd5e1; }
+
+        .markdown-content h1 {
+            font-size: 2.25em; font-weight: 700; color: #0f172a;
+            margin-top: 1.5em; margin-bottom: 0.6em;
+            padding-bottom: 0.3em; border-bottom: 1px solid #e2e8f0;
+            scroll-margin-top: 4rem;
+        }
+        .markdown-content h2 {
+            font-size: 1.65em; font-weight: 600; color: #1e293b;
+            margin-top: 2em; margin-bottom: 0.6em;
+            padding-bottom: 0.25em; border-bottom: 1px solid #e2e8f0;
+            scroll-margin-top: 4rem;
+        }
+        .markdown-content h3 {
+            font-size: 1.35em; font-weight: 600; color: #1e293b;
+            margin-top: 1.8em; margin-bottom: 0.5em;
+            scroll-margin-top: 4rem;
+        }
+        .markdown-content h4 {
+            font-size: 1.15em; font-weight: 600; color: #334155;
+            margin-top: 1.5em; margin-bottom: 0.5em;
+            scroll-margin-top: 4rem;
+        }
+        .markdown-content h5, .markdown-content h6 {
+            font-size: 1em; font-weight: 600;
+            margin-top: 1.25em; margin-bottom: 0.5em;
+            scroll-margin-top: 4rem;
+        }
+
+        .dark .markdown-content h1, .dark .markdown-content h2 { color: #f1f5f9; border-bottom-color: #334155; }
+        .dark .markdown-content h3, .dark .markdown-content h4 { color: #e2e8f0; }
+
+        .markdown-content p { margin-top: 0; margin-bottom: 1.25em; }
+        .markdown-content a { color: #2563eb; text-decoration: none; font-weight: 500; }
+        .markdown-content a:hover { text-decoration: underline; color: #1d4ed8; }
+        .dark .markdown-content a { color: #60a5fa; }
+
+        .markdown-content ul { list-style-type: disc; padding-left: 2em; margin-bottom: 1.25em; }
+        .markdown-content ol { list-style-type: decimal; padding-left: 2em; margin-bottom: 1.25em; }
+        .markdown-content li { margin-top: 0.25em; margin-bottom: 0.25em; }
+
+        .markdown-content blockquote {
+            padding: 0.75rem 1.25rem; margin: 1.5em 0;
+            color: #475569; background-color: #f8fafc;
+            border-left: 4px solid #cbd5e1;
+            border-radius: 0 8px 8px 0;
+        }
+        .markdown-content blockquote > p:last-child { margin-bottom: 0; }
+        .dark .markdown-content blockquote { color: #94a3b8; background-color: #1e293b; border-left-color: #475569; }
+
+        .markdown-content code:not(pre code) {
+            padding: 0.2em 0.4em; font-size: 85%;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            background-color: #f1f5f9; border-radius: 6px; color: #0f172a;
+        }
+        .dark .markdown-content code:not(pre code) { background-color: #1e293b; color: #e2e8f0; }
+
+        .markdown-content pre {
+            padding: 1.25rem; margin-top: 1.25em; margin-bottom: 1.25em;
+            overflow-x: auto; background-color: #f8fafc;
+            border: 1px solid #e2e8f0; border-radius: 12px;
+        }
+        .dark .markdown-content pre { background-color: #0d1117; border-color: #30363d; }
+
+        .markdown-content pre code {
+            font-size: 88%;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            line-height: 1.5; background-color: transparent; padding: 0; border-radius: 0;
+        }
+
+        /* copy-code button wrapper */
+        .markdown-content .code-block-wrapper { position: relative; margin-bottom: 16px; }
+        .markdown-content .code-block-wrapper pre { margin-bottom: 0; padding-right: 48px; }
+        .markdown-content .copy-code-button {
+            position: absolute; top: 8px; right: 8px;
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px;
+            border: 1px solid #d0d7de; border-radius: 6px;
+            background: rgba(255,255,255,0.88); color: #57606a;
+            cursor: pointer;
+            transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+        }
+        .markdown-content .copy-code-button:hover { background: #f6f8fa; border-color: #8c959f; color: #24292f; }
+        .dark .markdown-content .copy-code-button { border-color: #30363d; background: rgba(22,27,34,0.88); color: #8b949e; }
+        .dark .markdown-content .copy-code-button:hover { background: #21262d; border-color: #8b949e; color: #f0f6fc; }
+        .markdown-content .copy-code-button.copied { color: #16a34a; border-color: #16a34a; }
+
+        /* Tables */
+        .markdown-content table { display: block; width: 100%; overflow-x: auto; margin: 1.5em 0; border-collapse: collapse; }
+        .markdown-content table th {
+            background-color: #f8fafc; color: #1e293b; font-weight: 600;
+            padding: 0.75rem 1rem; border: 1px solid #e2e8f0; text-align: left;
+        }
+        .markdown-content table td { padding: 0.75rem 1rem; border: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
+        .markdown-content table th:first-child, .markdown-content table td:first-child { white-space: nowrap; }
+        .markdown-content table tr:nth-child(2n) { background-color: #f8fafc; }
+        .dark .markdown-content table th, .dark .markdown-content table td { border-color: #334155; }
+        .dark .markdown-content table tr:nth-child(2n) { background-color: #1e293b; }
+
+        /* Images */
+        .markdown-content img {
+            max-width: 100%; height: auto;
+            border-radius: 12px; border: 1px solid #e2e8f0;
+            margin: 2em auto; display: block;
+        }
+
+        /* HR */
+        .markdown-content hr { border: 0; height: auto; margin: 48px 0; text-align: center; overflow: visible; background: transparent; }
+        .markdown-content hr::before { content: "..."; display: inline-block; letter-spacing: 0.6em; font-size: 32px; color: #d0d7de; font-weight: 700; line-height: 1; }
+        .dark .markdown-content hr::before { color: #334155; }
+
+        /* Mermaid */
+        .markdown-content .mermaid { margin-bottom: 32px; }
+
+        /* ── GitHub-style Alerts ─────────────────────────────────────────── */
+        .markdown-content .markdown-alert {
+            padding: 1rem 1.25rem; margin-bottom: 1.25em;
+            border-left: 4px solid; border-radius: 0 8px 8px 0;
+        }
+        .markdown-content .markdown-alert > :first-child { margin-top: 0; }
+        .markdown-content .markdown-alert > :last-child { margin-bottom: 0; }
+        .markdown-content .markdown-alert-title {
+            display: flex; align-items: center; font-weight: 700;
+            font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem;
+        }
+
+        .markdown-content .markdown-alert-note  { border-left-color: #2563eb; background-color: #eff6ff; }
+        .markdown-content .markdown-alert-note .markdown-alert-title { color: #1d4ed8; }
+        .dark .markdown-content .markdown-alert-note  { border-left-color: #2f81f7; background-color: rgba(56,139,253,0.12); }
+        .dark .markdown-content .markdown-alert-note .markdown-alert-title { color: #60a5fa; }
+
+        .markdown-content .markdown-alert-tip   { border-left-color: #16a34a; background-color: #f0fdf4; }
+        .markdown-content .markdown-alert-tip .markdown-alert-title { color: #15803d; }
+        .dark .markdown-content .markdown-alert-tip   { border-left-color: #3fb950; background-color: rgba(46,160,67,0.12); }
+        .dark .markdown-content .markdown-alert-tip .markdown-alert-title { color: #4ade80; }
+
+        .markdown-content .markdown-alert-important { border-left-color: #9333ea; background-color: #faf5ff; }
+        .markdown-content .markdown-alert-important .markdown-alert-title { color: #7e22ce; }
+        .dark .markdown-content .markdown-alert-important { border-left-color: #a371f7; background-color: rgba(163,113,247,0.12); }
+        .dark .markdown-content .markdown-alert-important .markdown-alert-title { color: #c084fc; }
+
+        .markdown-content .markdown-alert-warning { border-left-color: #d97706; background-color: #fffbeb; }
+        .markdown-content .markdown-alert-warning .markdown-alert-title { color: #b45309; }
+        .dark .markdown-content .markdown-alert-warning { border-left-color: #d29922; background-color: rgba(187,128,9,0.12); }
+        .dark .markdown-content .markdown-alert-warning .markdown-alert-title { color: #fbbf24; }
+
+        .markdown-content .markdown-alert-caution { border-left-color: #dc2626; background-color: #fef2f2; }
+        .markdown-content .markdown-alert-caution .markdown-alert-title { color: #b91c1c; }
+        .dark .markdown-content .markdown-alert-caution { border-left-color: #f85149; background-color: rgba(248,81,73,0.12); }
+        .dark .markdown-content .markdown-alert-caution .markdown-alert-title { color: #f87171; }
+
+        /* ── ToC ─────────────────────────────────────────────────────────── */
+        #tocSidebar { scrollbar-width: none; -ms-overflow-style: none; }
+        #tocSidebar::-webkit-scrollbar { display: none; }
+
+        .toc-link {
+            display: block;
+            font-size: 0.875rem; line-height: 1.25rem;
+            padding: 0.3rem 0.75rem;
+            border-left: 3px solid transparent;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+            color: #64748b;
+            border-radius: 0 4px 4px 0;
+        }
+        .dark .toc-link { color: #94a3b8; }
+        .toc-link:hover { color: #0f172a; background-color: #f1f5f9; }
+        .dark .toc-link:hover { color: #f1f5f9; background-color: #1e293b; }
+        .toc-link.active-toc-link {
+            border-left-color: #2563eb !important;
+            color: #2563eb !important;
+            font-weight: 600;
+            background-color: rgba(37,99,235,0.06);
+        }
+        .dark .toc-link.active-toc-link {
+            border-left-color: #60a5fa !important;
+            color: #60a5fa !important;
+            background-color: rgba(96,165,250,0.08);
+        }
+
+        /* ── Resize handles ──────────────────────────────────────────────── */
+        #toc-resizer, #nav-resizer {
+            width: 4px; cursor: col-resize;
+            transition: background-color 0.15s; z-index: 10;
+        }
+        #toc-resizer:hover, #toc-resizer.resizing,
+        #nav-resizer:hover, #nav-resizer.resizing { background-color: #2563eb; }
+
+        /* ── Sidebar collapse animation ──────────────────────────────────── */
+        #doc-sidebar.collapsed {
+            width: 0 !important; opacity: 0; overflow: hidden; border-right-width: 0;
+            transition: width 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
+        }
+
+        /* ── Content fade ────────────────────────────────────────────────── */
+        #content-wrapper { transition: opacity 0.12s ease-in-out; }
+
+        /* ── line-clamp ──────────────────────────────────────────────────── */
+        .line-clamp-2 {
+            display: -webkit-box; -webkit-line-clamp: 2;
+            line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+
+<!-- ─── Header ─────────────────────────────────────────────────────────────── -->
+<header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
+    <div class="flex items-center justify-between px-6 py-3">
+        <div class="flex items-center gap-4">
+            <button id="sidebarToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Toggle sidebar">
+                <i data-lucide="panel-left" class="w-5 h-5"></i>
+            </button>
+            <div class="flex items-center gap-3 border-l border-gray-200 dark:border-gray-800 pl-4">
+                <i data-lucide="file-text" class="w-5 h-5 text-[#0f62fe]"></i>
+                <span class="text-lg font-semibold leading-tight">Markdown Viewer</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-1">
+            <button id="fontSizeDecrease" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Decrease font size">
+                <i data-lucide="a-arrow-down" class="w-5 h-5"></i>
+            </button>
+            <button id="fontSizeIncrease" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Increase font size">
+                <i data-lucide="a-arrow-up" class="w-5 h-5"></i>
+            </button>
+            <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Toggle theme">
+                <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+                <i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- ─── Three-pane layout ─────────────────────────────────────────────────── -->
+<div class="flex overflow-hidden" style="height: calc(100vh - 57px)">
+
+    <!-- Pane 1 · Document list -->
+    <aside id="doc-sidebar" class="w-72 flex-shrink-0 bg-gray-50 dark:bg-gray-900 flex flex-col border-r border-gray-200 dark:border-gray-800">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+            <div class="relative">
+                <input type="text" id="docFilter" placeholder="Filter documents…"
+                    class="w-full px-3 py-2 pl-9 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0f62fe] focus:border-transparent"
+                />
+                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            </div>
+        </div>
+        <div class="flex-1 overflow-y-auto p-3">
+            <div id="documentList" class="space-y-0.5"></div>
+            <div id="noResults" class="hidden text-sm text-gray-400 text-center py-10">
+                <i data-lucide="file-search" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
+                <p>No documents found</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Resizer · nav -->
+    <div id="nav-resizer" class="bg-transparent border-r border-gray-200 dark:border-gray-800 flex-shrink-0"></div>
+
+    <!-- Pane 2+3 · ToC + Content -->
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- Pane 2 · Table of Contents -->
+        <aside id="toc-pane" class="w-64 flex-shrink-0 bg-blue-50/20 dark:bg-blue-950/10 border-r border-gray-100 dark:border-gray-800/50 flex flex-col">
+            <div class="px-5 pt-5 pb-2 flex-shrink-0">
+                <p class="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">On this page</p>
+            </div>
+            <nav id="tocSidebar" class="flex-1 overflow-y-auto pb-8 pr-1"></nav>
+        </aside>
+
+        <!-- Resizer · toc -->
+        <div id="toc-resizer" class="bg-transparent border-r border-gray-100 dark:border-gray-800/50 flex-shrink-0"></div>
+
+        <!-- Pane 3 · Markdown content -->
+        <main id="mainScroll" class="flex-1 overflow-y-auto overflow-x-hidden">
+            <div id="content-wrapper" class="max-w-4xl mx-auto px-10 py-12">
+                <div id="content">
+                    <div class="flex flex-col items-center justify-center py-32 text-center">
+                        <i data-lucide="file-text" class="w-20 h-20 text-gray-200 dark:text-gray-800 mb-6"></i>
+                        <h3 class="text-2xl font-light text-gray-400 dark:text-gray-600">Select a document to begin</h3>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// Theme
+// ═══════════════════════════════════════════════════════════════════════════════
+const html = document.documentElement;
+const hljsDark  = document.getElementById('hljs-dark');
+const hljsLight = document.getElementById('hljs-light');
+
+function setTheme(theme) {
+    html.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem('theme', theme);
+    hljsDark.disabled  = theme !== 'dark';
+    hljsLight.disabled = theme === 'dark';
+    if (window.mermaid) {
+        window.mermaid.initialize({ startOnLoad: true, theme: theme === 'dark' ? 'dark' : 'default' });
+        const mermaidDivs = document.querySelectorAll('.mermaid');
+        if (mermaidDivs.length) window.mermaid.run({ querySelector: '.mermaid' });
+    }
+    lucide.createIcons();
+}
+setTheme(localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+document.getElementById('themeToggle').addEventListener('click', () =>
+    setTheme(html.classList.contains('dark') ? 'light' : 'dark')
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Font size
+// ═══════════════════════════════════════════════════════════════════════════════
+const MIN_FS = 12, MAX_FS = 24, DEF_FS = 16;
+function getCurFS() { return parseInt(localStorage.getItem('mdv-font-size') || DEF_FS, 10); }
+function setFS(size) {
+    const s = Math.max(MIN_FS, Math.min(MAX_FS, size));
+    html.style.setProperty('--content-font-size', `${s}px`);
+    localStorage.setItem('mdv-font-size', s);
+    document.getElementById('fontSizeIncrease').disabled = s >= MAX_FS;
+    document.getElementById('fontSizeDecrease').disabled = s <= MIN_FS;
+}
+setFS(getCurFS());
+document.getElementById('fontSizeIncrease').addEventListener('click', () => setFS(getCurFS() + 1));
+document.getElementById('fontSizeDecrease').addEventListener('click', () => setFS(getCurFS() - 1));
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Sidebar (doc list) collapse
+// ═══════════════════════════════════════════════════════════════════════════════
+const docSidebar = document.getElementById('doc-sidebar');
+function setSidebarState(collapsed) {
+    docSidebar.classList.toggle('collapsed', collapsed);
+    localStorage.setItem('mdv-sidebar-collapsed', collapsed);
+}
+setSidebarState(localStorage.getItem('mdv-sidebar-collapsed') === 'true');
+document.getElementById('sidebarToggle').addEventListener('click', () =>
+    setSidebarState(!docSidebar.classList.contains('collapsed'))
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Resize handles (drag to resize nav sidebar + toc sidebar)
+// ═══════════════════════════════════════════════════════════════════════════════
+const tocPane    = document.getElementById('toc-pane');
+const tocResizer = document.getElementById('toc-resizer');
+const navResizer = document.getElementById('nav-resizer');
+
+const savedTocW = localStorage.getItem('mdv-toc-width');
+if (savedTocW) tocPane.style.width = savedTocW;
+const savedNavW = localStorage.getItem('mdv-nav-width');
+if (savedNavW) docSidebar.style.width = savedNavW;
+
+let isResizing = false, currentResizer = null;
+
+tocResizer.addEventListener('mousedown', () => {
+    isResizing = true; currentResizer = 'toc';
+    tocResizer.classList.add('resizing');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+});
+navResizer.addEventListener('mousedown', () => {
+    isResizing = true; currentResizer = 'nav';
+    navResizer.classList.add('resizing');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+});
+document.addEventListener('mousemove', e => {
+    if (!isResizing) return;
+    if (currentResizer === 'toc') {
+        const w = e.clientX - tocPane.getBoundingClientRect().left;
+        if (w > 120 && w < 600) tocPane.style.width = `${w}px`;
+    } else {
+        const w = e.clientX - docSidebar.getBoundingClientRect().left;
+        if (w > 180 && w < 600) docSidebar.style.width = `${w}px`;
+    }
+});
+document.addEventListener('mouseup', () => {
+    if (!isResizing) return;
+    if (currentResizer === 'toc') localStorage.setItem('mdv-toc-width', tocPane.style.width);
+    else                           localStorage.setItem('mdv-nav-width', docSidebar.style.width);
+    isResizing = false; currentResizer = null;
+    tocResizer.classList.remove('resizing'); navResizer.classList.remove('resizing');
+    document.body.style.cursor = ''; document.body.style.userSelect = '';
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Marked setup
+// ═══════════════════════════════════════════════════════════════════════════════
+marked.setOptions({
+    breaks: true, gfm: true,
+    highlight: (code, lang) =>
+        (lang && hljs.getLanguage(lang))
+            ? hljs.highlight(code, { language: lang }).value
+            : hljs.highlightAuto(code).value
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ToC Scrollspy — mirrors mor-ucp-internal handleScroll logic exactly:
+//   walk headings top→bottom; mark the last one whose getBoundingClientRect().top
+//   is <= HEADER_OFFSET (accounts for the sticky page header).
+//   Auto-scroll the ToC sidebar to keep the active link visible.
+// ═══════════════════════════════════════════════════════════════════════════════
+const HEADER_OFFSET = 80; // px — height of sticky header + a little breathing room
+let activeHeadingId = '';
+let isClickScrolling = false;
+
+function updateTocHighlight(id) {
+    if (id === activeHeadingId) return;
+    activeHeadingId = id;
+    const tocEl = document.getElementById('tocSidebar');
+    document.querySelectorAll('.toc-link').forEach(link => {
+        const isActive = link.getAttribute('data-toc-id') === id;
+        link.classList.toggle('active-toc-link', isActive);
+        // Auto-scroll ToC sidebar so the active link is visible (nearest, no jitter)
+        if (isActive) {
+            link.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    });
+}
+
+function runScrollSpy() {
+    if (isClickScrolling) return;
+    const contentEl = document.getElementById('content');
+    if (!contentEl) return;
+    const headings = Array.from(contentEl.querySelectorAll('h1, h2, h3, h4'));
+    if (!headings.length) return;
+
+    let current = '';
+    for (const h of headings) {
+        // getBoundingClientRect gives position relative to viewport — same approach as mor-ucp-internal
+        if (h.getBoundingClientRect().top <= HEADER_OFFSET) {
+            current = h.id;
+        } else {
+            break; // headings are in document order; once we pass the threshold, stop
+        }
+    }
+
+    // If nothing has scrolled past the threshold yet, highlight the first heading
+    if (!current && headings.length) current = headings[0].id;
+    updateTocHighlight(current);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Scroll to heading — instant jump (matches mor-ucp-internal scrollTo + behavior:'auto')
+// ═══════════════════════════════════════════════════════════════════════════════
+window.scrollToHeader = function(e, id) {
+    e.preventDefault();
+    const el = document.getElementById(id);
+    if (!el) return;
+    isClickScrolling = true;
+    const top = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET;
+    // Use mainScroll (the scrolling container), not window
+    document.getElementById('mainScroll').scrollTo({ top, behavior: 'auto' });
+    updateTocHighlight(id);
+    // Release click-scroll lock on next frame
+    requestAnimationFrame(() => { isClickScrolling = false; });
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Scroll position persistence (per document)
+// ═══════════════════════════════════════════════════════════════════════════════
+const mainScroll = document.getElementById('mainScroll');
+let currentPath = null;
+mainScroll.addEventListener('scroll', () => {
+    if (currentPath) localStorage.setItem(`mdv-scroll-${currentPath}`, mainScroll.scrollTop);
+    runScrollSpy();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Copy-to-clipboard for code blocks
+// ═══════════════════════════════════════════════════════════════════════════════
+async function copyText(text) {
+    if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.top = '-9999px';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+}
+
+function setupCodeBlockCopy(contentEl) {
+    contentEl.querySelectorAll('.markdown-content pre').forEach(pre => {
+        if (pre.closest('.code-block-wrapper')) return;
+        const code = pre.querySelector('code');
+        if (!code || code.classList.contains('language-mermaid')) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'code-block-wrapper';
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'copy-code-button';
+        btn.title = 'Copy code';
+        btn.setAttribute('aria-label', 'Copy code to clipboard');
+        btn.innerHTML = '<i data-lucide="copy" class="w-4 h-4"></i>';
+
+        btn.addEventListener('click', async () => {
+            try {
+                await copyText(code.textContent);
+                btn.classList.add('copied');
+                btn.title = 'Copied!';
+                btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i>';
+                lucide.createIcons();
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.title = 'Copy code';
+                    btn.innerHTML = '<i data-lucide="copy" class="w-4 h-4"></i>';
+                    lucide.createIcons();
+                }, 1400);
+            } catch (err) { console.error('Copy failed:', err); }
+        });
+        wrapper.appendChild(btn);
+    });
+    lucide.createIcons();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Document list rendering
+// ═══════════════════════════════════════════════════════════════════════════════
+let allDocuments = [];
+
+async function loadDocuments() {
+    try {
+        const res = await fetch('/api/documents');
+        allDocuments = await res.json();
+        renderDocuments(allDocuments);
+        updateActiveDocState();
+    } catch (e) { console.error('Failed to load document list:', e); }
+}
+
+function renderDocuments(docs) {
+    const listEl = document.getElementById('documentList');
+    const noResults = document.getElementById('noResults');
+    if (!docs.length) {
+        listEl.innerHTML = '';
+        noResults.classList.remove('hidden');
+        return;
+    }
+    noResults.classList.add('hidden');
+    listEl.innerHTML = docs.map(doc => {
+        const parts = doc.name.split(' > ');
+        const filename = parts[parts.length - 1];
+        const dirPath = parts.slice(0, -1).join(' > ');
+        return `<a href="#${doc.path}"
+            class="doc-link flex items-start gap-2.5 px-3 py-2 rounded-lg transition-colors text-sm"
+            data-doc="${doc.path}"
+            data-doc-name="${doc.name.toLowerCase()}">
+            <i data-lucide="file-text" class="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-400"></i>
+            <div class="flex-1 min-w-0">
+                <div class="font-medium text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug">${filename}</div>
+                ${dirPath ? `<div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">${dirPath}</div>` : ''}
+            </div>
+        </a>`;
+    }).join('');
+    lucide.createIcons();
+}
+
+function updateActiveDocState() {
+    const hash = window.location.hash.substring(1).split('?')[0];
+    document.querySelectorAll('[data-doc]').forEach(el => {
+        const isActive = el.getAttribute('data-doc') === hash;
+        el.classList.remove('bg-[#0f62fe]','text-white','text-gray-900','dark:text-gray-100','hover:bg-gray-100','dark:hover:bg-gray-800');
+        if (isActive) {
+            el.classList.add('bg-[#0f62fe]', 'text-white');
+        } else {
+            el.classList.add('text-gray-900','dark:text-gray-100','hover:bg-gray-100','dark:hover:bg-gray-800');
+        }
+        const icon = el.querySelector('i');
+        if (icon) { icon.classList.toggle('text-white', isActive); icon.classList.toggle('text-gray-400', !isActive); }
+        const name = el.querySelector('.font-medium');
+        if (name) { name.classList.toggle('text-white', isActive); name.classList.toggle('text-gray-900', !isActive); name.classList.toggle('dark:text-gray-100', !isActive); }
+        const dir = el.querySelector('.text-xs');
+        if (dir) { dir.classList.toggle('text-blue-200', isActive); dir.classList.toggle('text-gray-400', !isActive); dir.classList.toggle('dark:text-gray-500', !isActive); }
+    });
+}
+
+// Filter
+document.getElementById('docFilter').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase().trim();
+    if (!q) { renderDocuments(allDocuments); updateActiveDocState(); return; }
+    renderDocuments(allDocuments.filter(d => d.name.toLowerCase().includes(q) || d.path.toLowerCase().includes(q)));
+    updateActiveDocState();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Document loading & rendering
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadDocument(docPath) {
+    const contentEl = document.getElementById('content');
+    const tocEl     = document.getElementById('tocSidebar');
+    const wrapper   = document.getElementById('content-wrapper');
+
+    wrapper.style.opacity = '0';
+
+    try {
+        const res = await fetch(`/api/document?path=${encodeURIComponent(docPath)}`);
+        const markdown = await res.text();
+        const docDir = docPath.substring(0, docPath.lastIndexOf('/') + 1);
+
+        // ── Process GitHub-style alerts before parsing ─────────────────────
+        const processedMd = markdown.replace(
+            /^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*\n((?:>.*\n?)*)/gim,
+            (_, type, body) => {
+                const alertType = type.toLowerCase();
+                const inner = body.replace(/^>\s?/gm, '').trim();
+                const rendered = marked.parse(inner);
+                return `<!--ALERT_START:${alertType}:${type}-->${rendered}<!--ALERT_END-->\n\n`;
+            }
+        );
+
+        let renderedHtml = marked.parse(processedMd);
+
+        // ── Reconstruct alert divs ─────────────────────────────────────────
+        renderedHtml = renderedHtml.replace(
+            /<!--ALERT_START:(\w+):(\w+)-->([\s\S]*?)<!--ALERT_END-->/g,
+            (_, alertType, title, body) =>
+                `<div class="markdown-alert markdown-alert-${alertType}"><div class="markdown-alert-title">${title}</div>${body}</div>`
+        );
+
+        contentEl.innerHTML = `<div class="markdown-content" style="--content-font-size: ${getCurFS()}px">${renderedHtml}</div>`;
+
+        // ── Fix relative image paths ───────────────────────────────────────
+        contentEl.querySelectorAll('img').forEach(img => {
+            const src = img.getAttribute('src');
+            if (src && !src.startsWith('http') && !src.startsWith('/api/')) {
+                img.setAttribute('src', `/api/image?path=${encodeURIComponent(docDir + src)}`);
+            }
+        });
+
+        // ── Internal anchor links → scroll instead of navigate ────────────
+        contentEl.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                const id = a.getAttribute('href').substring(1);
+                window.scrollToHeader(e, id);
+            });
+        });
+
+        // ── Assign IDs to headings ─────────────────────────────────────────
+        contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(h => {
+            if (!h.id) h.id = h.innerText.toLowerCase().replace(/[^\w]+/g, '-').replace(/^-|-$/g, '');
+        });
+
+        // ── Build ToC ─────────────────────────────────────────────────────
+        const headings = Array.from(contentEl.querySelectorAll('h1,h2,h3,h4'));
+        if (headings.length) {
+            tocEl.innerHTML = headings.map(h => {
+                const level = parseInt(h.tagName[1], 10);
+                const indent = Math.max(12, level * 10);
+                const weight = level <= 2 ? '600' : '400';
+                return `<a href="#${h.id}" onclick="scrollToHeader(event,'${h.id}')"
+                    class="toc-link" style="padding-left:${indent}px; font-weight:${weight}"
+                    data-toc-id="${h.id}">${h.innerText}</a>`;
+            }).join('');
+        } else {
+            tocEl.innerHTML = '<p class="text-xs text-gray-400 italic p-4">No headings found</p>';
+        }
+
+        // ── Mermaid ────────────────────────────────────────────────────────
+        const mermaidBlocks = contentEl.querySelectorAll('code.language-mermaid');
+        mermaidBlocks.forEach(block => {
+            const div = document.createElement('div');
+            div.className = 'mermaid';
+            div.textContent = block.textContent;
+            block.parentElement.replaceWith(div);
+        });
+        if (mermaidBlocks.length && window.mermaid) {
+            await window.mermaid.run({ querySelector: '.mermaid' });
+        }
+
+        // ── Syntax highlighting ────────────────────────────────────────────
+        contentEl.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
+        setupCodeBlockCopy(contentEl);
+
+        // ── Restore saved scroll or jump to top ───────────────────────────
+        currentPath = docPath;
+        updateActiveDocState();
+
+        const savedScroll = localStorage.getItem(`mdv-scroll-${docPath}`);
+        mainScroll.scrollTop = savedScroll ? parseInt(savedScroll, 10) : 0;
+
+        requestAnimationFrame(() => {
+            wrapper.style.opacity = '1';
+            runScrollSpy();
+        });
+    } catch (err) {
+        console.error('Failed to load document:', err);
+        wrapper.style.opacity = '1';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Hash routing
+// ═══════════════════════════════════════════════════════════════════════════════
+window.addEventListener('hashchange', () => {
+    const hash = window.location.hash.substring(1).split('?')[0];
+    if (hash && hash !== currentPath) loadDocument(hash);
+    updateActiveDocState();
+});
+
+(async () => {
+    await loadDocuments();
+    const hash = window.location.hash.substring(1).split('?')[0];
+    if (hash) { loadDocument(hash); return; }
+    const first = document.querySelector('[data-doc]');
+    if (first) window.location.hash = first.getAttribute('data-doc');
+})();
+</script>
+</body>
+</html>

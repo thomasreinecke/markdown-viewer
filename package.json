@@ -1,0 +1,38 @@
+{
+  "name": "@thomasreinecke/markdown-viewer",
+  "version": "1.0.0",
+  "description": "A zero-dependency local markdown viewer with a three-pane layout, sticky ToC scrollspy, dark mode, Mermaid support, and syntax highlighting.",
+  "main": "bin/server.js",
+  "bin": {
+    "markdown-viewer": "bin/server.js"
+  },
+  "scripts": {
+    "start": "node bin/server.js"
+  },
+  "keywords": [
+    "markdown",
+    "viewer",
+    "documentation",
+    "toc",
+    "local",
+    "cli"
+  ],
+  "author": "Thomas Reinecke",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thomasreinecke/markdown-viewer.git"
+  },
+  "homepage": "https://github.com/thomasreinecke/markdown-viewer#readme",
+  "bugs": {
+    "url": "https://github.com/thomasreinecke/markdown-viewer/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "bin/",
+    "index.html",
+    "README.md"
+  ]
+}
